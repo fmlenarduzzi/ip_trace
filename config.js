@@ -9,4 +9,8 @@ config.base_currency = "USD";
 
 config.ip_trace_url = "http://ip-api.com/json/YOUR_ADDRESS?fields=8446431";
 
+// UY coords
+config.baseLatDeg = -34.8576;
+config.baseLonDeg = 56.1702;
+
 module.exports = config;

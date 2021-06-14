@@ -5,9 +5,12 @@ const bodyParser = require('body-parser');
 const axios = require('axios');
 const config = require('./config');
 const currencySymbols = require('./symbols');
+const connectDb = require("./connection");
+const Country = require('./Country');
 
 
 // App
+
 const app = express();
 app.use(bodyParser.json());
 
@@ -29,12 +32,46 @@ function getTraceInfo(req) {
         });
 }
 
-function prepareResponse(data, rates) {
-    console.log(1, data);
-    console.log(2, rates);
+function calculateDistance(dest) {
+    const R = 6371.0710; // Radius of the Earth in kilometers
+    const rlat1 = config.baseLatDeg * (Math.PI / 180); // Convert degrees to radians
+    const rlat2 = dest.lat * (Math.PI / 180); // Convert degrees to radians
+    const difflat = rlat2 - rlat1; // Radian difference (latitudes)
+    const difflon = (dest.lon - config.baseLonDeg) * (Math.PI / 180); // Radian difference (longitudes)
+
+    return 2 * R * Math.asin(Math.sqrt(Math.sin(difflat / 2) * Math.sin(difflat / 2) + Math.cos(rlat1) * Math.cos(rlat2) * Math.sin(difflon / 2) * Math.sin(difflon / 2)));
+}
+
+function getStatics() {
+    // Buscar distance mayor
+
+    // Buscar max hits
+
+    // Armar respuesta
+    return 'Not implemented';
+}
+
+async function updateStatics(country, distanceToUY) {
+    console.log(1, country);
+    const filter = { name: country };
+    let update = {};
+    const options = { upsert: true, new: true };
+    let doc = await Country.findOne(filter);
+    if (doc) {
+        update = {$max: {'distance': distanceToUY}, $inc: {'hits': 1}};
+        await Country.findOneAndUpdate(filter, update, options);
+    } else {
+        const newCountry = new Country({ name: country, distance: distanceToUY, hits: 1 });
+        await newCountry.save().then(() => console.log(country + " country was created"));
+    }
+}
+
+function prepareTraceResponse(data, rates) {
     const fromPrice = rates[config.base_currency];
     const toPrice = rates[data.currency];   // to = data.countryCode
     const conversionRate = toPrice / fromPrice;
+
+    const distanceToUY = calculateDistance(data);
 
     return {
         "ip": data.query,
@@ -53,7 +90,7 @@ function prepareResponse(data, rates) {
                 "conversion_rate": 1
             }
         ],
-        "distance_to_uy": 0
+        "distance_to_uy": distanceToUY
     }
 }
 
@@ -61,11 +98,21 @@ function prepareResponse(data, rates) {
 app.post('/traces', async (req, res) => {
     var p1 = getTraceInfo(req);
     var p2 = getRates();
-    Promise.all([p1, p2]).then((values) => {
-        const result = prepareResponse(values[0], values[1]);
+    Promise.all([p1, p2]).then(async (responses) => {
+        const result = prepareTraceResponse(responses[0], responses[1]);
         res.send(result);
+        await updateStatics(result.name, result.distance_to_uy);
     });
+});
+
+app.get('/statics', (req, res) => {
+    const result = getStatics();
+    res.send(result);
 });
 
 app.listen(config.app_port, config.app_host);
 console.log(`Running on https://${config.app_host}:${config.app_port}`);
+
+connectDb().then(() => {
+    console.log("MongoDb connected");
+});
