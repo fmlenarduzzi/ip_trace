@@ -43,7 +43,6 @@ function calculateDistance(dest) {
 
 async function getStatics() {
     const longestDistance = await Country.findOne({}).sort({distance : -1}).limit(1);
-    console.log(longestDistance);
 
     const group =
         { $group: {
@@ -61,7 +60,7 @@ async function getStatics() {
     const sort = {"$sort": {"_id":-1}}
     const limit= {"$limit": 1}
     const mostTraced = await Country.aggregate([group, sort, limit]);
-    console.log(mostTraced);
+
     return {
         "longest_distance": {
             "country": longestDistance.name,
@@ -127,7 +126,7 @@ app.post('/traces', async (req, res) => {
     });
 });
 
-app.get('/statics', async (req, res) => {
+app.get('/statistics', async (req, res) => {
     const result = await getStatics();
     res.send(result);
 });
