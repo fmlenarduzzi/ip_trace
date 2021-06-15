@@ -42,13 +42,26 @@ function calculateDistance(dest) {
     return 2 * R * Math.asin(Math.sqrt(Math.sin(difflat / 2) * Math.sin(difflat / 2) + Math.cos(rlat1) * Math.cos(rlat2) * Math.sin(difflon / 2) * Math.sin(difflon / 2)));
 }
 
-function getStatics() {
-    // Buscar distance mayor
+async function getStatics() {
+    const longestDistance = await Country.findOne({}).sort({distance : -1}).limit(1);
+    console.log(longestDistance);
 
-    // Buscar max hits
+    const group = {$group:{_id:"hits", names:{$push:"$name"}, maxHits:{$max: "$hits"}, count:{$sum:1}}};
+    const sort = {$sort:{"_id":-1}};
+    const limit= {$limit:1};
+    const mostTraced = await Country.aggregate([group, sort, limit]);
+    console.log(mostTraced);
 
-    // Armar respuesta
-    return 'Not implemented';
+    return {
+        "longest_distance": {
+            "country": longestDistance.name,
+            "value": longestDistance.distance
+        },
+        "most_traced": {
+            "country": mostTraced[0].names,
+            "value": mostTraced[0].maxHits
+        }
+    };
 }
 
 async function updateStatics(country, distanceToUY) {
@@ -105,8 +118,8 @@ app.post('/traces', async (req, res) => {
     });
 });
 
-app.get('/statics', (req, res) => {
-    const result = getStatics();
+app.get('/statics', async (req, res) => {
+    const result = await getStatics();
     res.send(result);
 });
 
