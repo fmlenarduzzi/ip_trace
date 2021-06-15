@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
-const connection = "mongodb://localhost:27017/ipTraces";
+const config = require('../config/config');
+
+const connection = config.localConnection;
 const connectDb = () => {
     return mongoose.connect(connection);
 };

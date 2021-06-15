@@ -3,14 +3,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const config = require('./config');
-const currencySymbols = require('./symbols');
-const connectDb = require("./connection");
-const Country = require('./Country');
+const config = require('../config/config');
+const currencySymbols = require('../utils/symbols');
+const connectDb = require("../utils/connection");
+const Country = require('../models/Country');
 
 
 // App
-
 const app = express();
 app.use(bodyParser.json());
 
@@ -46,12 +45,23 @@ async function getStatics() {
     const longestDistance = await Country.findOne({}).sort({distance : -1}).limit(1);
     console.log(longestDistance);
 
-    const group = {$group:{_id:"hits", names:{$push:"$name"}, maxHits:{$max: "$hits"}, count:{$sum:1}}};
-    const sort = {$sort:{"_id":-1}};
-    const limit= {$limit:1};
+    const group =
+        { $group: {
+                _id: "$hits",
+                names: {
+                    $push: {
+                        $cond: [
+                            { $eq: ["$hits", {$max: "$hits"}]},
+                            "$name", ""
+                        ]
+                    }
+                },
+                count: {$sum: 1}}
+        }
+    const sort = {"$sort": {"_id":-1}}
+    const limit= {"$limit": 1}
     const mostTraced = await Country.aggregate([group, sort, limit]);
     console.log(mostTraced);
-
     return {
         "longest_distance": {
             "country": longestDistance.name,
@@ -59,13 +69,12 @@ async function getStatics() {
         },
         "most_traced": {
             "country": mostTraced[0].names,
-            "value": mostTraced[0].maxHits
+            "value": mostTraced[0]._id
         }
     };
 }
 
 async function updateStatics(country, distanceToUY) {
-    console.log(1, country);
     const filter = { name: country };
     let update = {};
     const options = { upsert: true, new: true };
