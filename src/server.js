@@ -9,13 +9,8 @@ const connectDb = require("../utils/connection");
 const Country = require('../models/Country');
 
 
-// App
-const app = express();
-app.use(bodyParser.json());
-
-
 function getRates() {
-    return axios.get(config.rates_conversion_url + config.api_key)
+    return axios.get(config.ratesConversionUrl + config.apiKey)
         .then((response) => {
             return response.data.rates;
         });
@@ -23,7 +18,7 @@ function getRates() {
 
 function getTraceInfo(req) {
     const traceIp = req.body.ip.toString();
-    const trace_url = config.ip_trace_url.replace("YOUR_ADDRESS", traceIp);
+    const trace_url = config.ipTraceUrl.replace("YOUR_ADDRESS", traceIp);
 
     return axios.get(trace_url)
         .then((response) => {
@@ -32,11 +27,11 @@ function getTraceInfo(req) {
 }
 
 function calculateDistance(dest) {
-    const R = 6371.0710; // Radius of the Earth in kilometers
-    const rlat1 = config.baseLatDeg * (Math.PI / 180); // Convert degrees to radians
-    const rlat2 = dest.lat * (Math.PI / 180); // Convert degrees to radians
-    const difflat = rlat2 - rlat1; // Radian difference (latitudes)
-    const difflon = (dest.lon - config.baseLonDeg) * (Math.PI / 180); // Radian difference (longitudes)
+    const R = 6371.0710;                                                // Radius of the Earth in kilometers
+    const rlat1 = config.baseLatDeg * (Math.PI / 180);                  // Convert degrees to radians
+    const rlat2 = dest.lat * (Math.PI / 180);                           // Convert degrees to radians
+    const difflat = rlat2 - rlat1;                                      // Radian difference (latitudes)
+    const difflon = (dest.lon - config.baseLonDeg) * (Math.PI / 180);   // Radian difference (longitudes)
 
     return 2 * R * Math.asin(Math.sqrt(Math.sin(difflat / 2) * Math.sin(difflat / 2) + Math.cos(rlat1) * Math.cos(rlat2) * Math.sin(difflon / 2) * Math.sin(difflon / 2)));
 }
@@ -88,7 +83,7 @@ async function updateStatics(country, distanceToUY) {
 }
 
 function prepareTraceResponse(data, rates) {
-    const fromPrice = rates[config.base_currency];
+    const fromPrice = rates[config.baseCurrency];
     const toPrice = rates[data.currency];   // to = data.countryCode
     const conversionRate = toPrice / fromPrice;
 
@@ -106,8 +101,8 @@ function prepareTraceResponse(data, rates) {
                 "symbol": currencySymbols[data.currency],
                 "conversion_rate": conversionRate
             }, {
-                "iso": config.base_currency,
-                "symbol": currencySymbols[config.base_currency],
+                "iso": config.baseCurrency,
+                "symbol": currencySymbols[config.baseCurrency],
                 "conversion_rate": 1
             }
         ],
@@ -115,25 +110,37 @@ function prepareTraceResponse(data, rates) {
     }
 }
 
-// App Routes
-app.post('/traces', async (req, res) => {
-    var p1 = getTraceInfo(req);
-    var p2 = getRates();
-    Promise.all([p1, p2]).then(async (responses) => {
-        const result = prepareTraceResponse(responses[0], responses[1]);
-        res.send(result);
-        await updateStatics(result.name, result.distance_to_uy);
+// App
+function main() {
+    const app = express();
+    app.use(bodyParser.json());
+
+    // App Routes
+    app.post('/traces', async (req, res) => {
+        var p1 = getTraceInfo(req);
+        var p2 = getRates();
+        Promise.all([p1, p2]).then(async (responses) => {
+            const result = prepareTraceResponse(responses[0], responses[1]);
+            res.send(result);
+            await updateStatics(result.name, result.distance_to_uy);
+        });
     });
-});
 
-app.get('/statistics', async (req, res) => {
-    const result = await getStatics();
-    res.send(result);
-});
+    app.get('/statistics', async (req, res) => {
+        const result = await getStatics();
+        res.send(result);
+    });
 
-app.listen(config.app_port, config.app_host);
-console.log(`Running on https://${config.app_host}:${config.app_port}`);
+    app.listen(config.appPort, config.appHost);
+    console.log(`Running on https://${config.appHost}:${config.appPort}`);
 
-connectDb().then(() => {
-    console.log("MongoDb connected");
-});
+    connectDb().then(() => {
+        console.log("MongoDb connected");
+    });
+}
+main();
+
+// For unit testing purpose
+exports.initServer = function () {
+    main();
+}
