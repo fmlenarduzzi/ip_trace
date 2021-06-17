@@ -74,3 +74,18 @@ Response [200 OK]:
   }
 }
 ```
+
+### Comments / Assumptions
+- I assumed that it is not going to be the case that two countries have the same longest distance based on the large
+   number of decimal places that this data contains. For this reason, I decided to use findOne().
+- On the other hand, in the response of the most_traced country, there is a high probability that there is more than 
+  one country with the same number of hits. If this happens, a list of countries will be part of the answer and not a 
+  single country.
+- In order to deal with expected throughput, this solution is adapted to be deployed into docker containers allowing 
+  to build a high-concurrency environment.
+
+
+### Technical Debts or Next Steps
+I identified a list of improvements which were not applied due to lack of time but could be added in future iterations:
+- Better management of responses, maybe adding a JSON builder.
+- Adds border cases for UTs.
