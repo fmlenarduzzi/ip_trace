@@ -1,17 +1,17 @@
 const axios = require('axios');
 const config = require('../config/config');
 const currencySymbols = require('../utils/symbols');
-const statistics = require('./statistics');
+const { calculateDistance } = require('./statistics');
 
 
-export function getRates() {
+function getRates() {
     return axios.get(config.ratesConversionUrl + config.apiKey)
         .then((response) => {
             return response.data.rates;
         });
 }
 
-export function getTraceInfo(req) {
+function getTraceInfo(req) {
     const traceIp = req.body.ip.toString();
     const trace_url = config.ipTraceUrl.replace("YOUR_ADDRESS", traceIp);
 
@@ -21,11 +21,11 @@ export function getTraceInfo(req) {
         });
 }
 
-export function makeResponse(data, rates) {
+function makeResponse(data, rates) {
     const fromPrice = rates[config.baseCurrency];
     const toPrice = rates[data.currency];   // to = data.countryCode
     const conversionRate = toPrice / fromPrice;
-    const distanceToUY = statistics.calculateDistance(data);
+    const distanceToUY = calculateDistance(data);
 
     return {
         "ip": data.query,
@@ -47,3 +47,4 @@ export function makeResponse(data, rates) {
         "distance_to_uy": distanceToUY
     };
 }
+module.exports = { getRates, getTraceInfo, makeResponse }

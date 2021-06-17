@@ -2,7 +2,7 @@ const config = require('../config/config');
 const Country = require('../models/Country');
 
 
-export function calculateDistance(dest) {
+function calculateDistance(dest) {
     const R = 6371.0710;                                                // Radius of the Earth in kilometers
     const rlat1 = config.baseLatDeg * (Math.PI / 180);                  // Convert degrees to radians
     const rlat2 = dest.lat * (Math.PI / 180);                           // Convert degrees to radians
@@ -12,7 +12,7 @@ export function calculateDistance(dest) {
     return 2 * R * Math.asin(Math.sqrt(Math.sin(difflat / 2) * Math.sin(difflat / 2) + Math.cos(rlat1) * Math.cos(rlat2) * Math.sin(difflon / 2) * Math.sin(difflon / 2)));
 }
 
-export async function getStatics() {
+async function getStatics() {
     const longestDistance = await Country.findOne({}).sort({distance : -1}).limit(1);
 
     const group =
@@ -44,7 +44,7 @@ export async function getStatics() {
     };
 }
 
-export async function updateStatics(country, distanceToUY) {
+async function updateStatics(country, distanceToUY) {
     const filter = { name: country };
     let update = {};
     const options = { upsert: true, new: true };
@@ -57,3 +57,5 @@ export async function updateStatics(country, distanceToUY) {
         await newCountry.save().then(() => console.log(country + " country was created"));
     }
 }
+
+module.exports = { calculateDistance, getStatics, updateStatics }

@@ -4,7 +4,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const config = require('../config/config');
 const connectDb = require("../utils/connection");
-const statistics = require('./statistics');
+const { getStatics, updateStatics } = require('./statistics');
 const apiCalls = require('./apiCalls');
 
 
@@ -20,12 +20,12 @@ function main() {
         Promise.all([p1, p2]).then(async (responses) => {
             const result = apiCalls.makeResponse(responses[0], responses[1]);
             res.send(result);
-            await statistics.updateStatics(result.name, result.distance_to_uy);
+            await updateStatics(result.name, result.distance_to_uy);
         });
     });
 
     app.get('/statistics', async (req, res) => {
-        const result = await statistics.getStatics();
+        const result = await getStatics();
         res.send(result);
     });
 
